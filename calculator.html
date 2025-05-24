@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор времени</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .calculator {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 300;
+        }
+
+        .display {
+            background: #1a1a1a;
+            color: #00ff88;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            font-family: 'Courier New', monospace;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .input-line {
+            font-size: 18px;
+            margin-bottom: 5px;
+            min-height: 25px;
+        }
+
+        .current-input {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .zero {
+            grid-column: span 1;
+        }
+
+        .lock {
+            background: #6c757d;
+            color: white;
+            font-size: 20px;
+        }
+
+        .lock:hover {
+            background: #545b62;
+        }
+
+        .lock.unlocked {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .lock.unlocked:hover {
+            background: #e0a800;
+        }
+
+        button {
+            height: 60px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .number {
+            background: #e9ecef;
+            color: #495057;
+            border: 1px solid #dee2e6;
+        }
+
+        .number:hover {
+            background: #dee2e6;
+        }
+
+        .operator {
+            background: #4285f4;
+            color: white;
+        }
+
+        .operator:hover {
+            background: #3367d6;
+        }
+
+        .equals {
+            background: #34a853;
+            color: white;
+        }
+
+        .equals:hover {
+            background: #2d8f47;
+        }
+
+        .clear {
+            background: #ea4335;
+            color: white;
+        }
+
+        .clear:hover {
+            background: #d23b2d;
+        }
+
+        .backspace {
+            background: #ea4335;
+            color: white;
+        }
+
+        .backspace:hover {
+            background: #d23b2d;
+        }
+
+        .time-format {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1>Калькулятор времени</h1>
+        
+        <div class="display" id="display">
+            <div class="input-line" id="expression"></div>
+            <div class="current-input" id="currentInput">00:00:00:00</div>
+        </div>
+
+        <div class="buttons">
+            <button class="number" onclick="addDigit('1')">1</button>
+            <button class="number" onclick="addDigit('2')">2</button>
+            <button class="number" onclick="addDigit('3')">3</button>
+            <button class="operator" onclick="addOperator('+')">+</button>
+            
+            <button class="number" onclick="addDigit('4')">4</button>
+            <button class="number" onclick="addDigit('5')">5</button>
+            <button class="number" onclick="addDigit('6')">6</button>
+            <button class="operator" onclick="addOperator('-')">-</button>
+            
+            <button class="number" onclick="addDigit('7')">7</button>
+            <button class="number" onclick="addDigit('8')">8</button>
+            <button class="number" onclick="addDigit('9')">9</button>
+            <button class="equals" onclick="calculate()">=</button>
+            
+            <button class="number zero" onclick="addDigit('0')">0</button>
+            <button class="lock" onclick="toggleLimits()" id="lockBtn">🔒</button>
+            <button class="backspace" onclick="backspace()">⌫</button>
+            <button class="clear" onclick="clearAll()">C</button>
+        </div>
+
+        <div class="time-format">
+            Формат: часы:минуты:секунды:кадры<br>
+            <span id="limitStatus">Ограничения: 24ч:60м:60с:24к (🔒 - вкл/выкл)</span>
+        </div>
+    </div>
+
+    <script>
+        let currentInput = '';
+        let currentField = 0; // 0-часы, 1-минуты, 2-секунды, 3-кадры
+        let fieldInputs = ['', '', '', '']; // Ввод для каждого поля
+        let expression = '';
+        let waitingForOperand = false;
+        let limitsEnabled = true; // Ограничения включены по умолчанию
+
+        function updateDisplay() {
+            const displayInput = document.getElementById('currentInput');
+            const displayExpression = document.getElementById('expression');
+            
+            // Отображаем текущий ввод
+            displayInput.textContent = formatTimeInput();
+            
+            // Отображаем выражение
+            displayExpression.textContent = expression;
+        }
+
+        function formatTimeInput() {
+            const hours = fieldInputs[0].padStart(2, '0');
+            const minutes = fieldInputs[1].padStart(2, '0');
+            const seconds = fieldInputs[2].padStart(2, '0');
+            const frames = fieldInputs[3].padStart(2, '0');
+            
+            return `${hours}:${minutes}:${seconds}:${frames}`;
+        }
+
+        function isValidInput(field, value) {
+            if (!limitsEnabled) return true;
+            
+            const num = parseInt(value);
+            switch(field) {
+                case 0: return num <= 24; // Часы: 0-24
+                case 1: return num <= 60; // Минуты: 0-60
+                case 2: return num <= 60; // Секунды: 0-60
+                case 3: return num <= 24; // Кадры: 0-24
+                default: return true;
+            }
+        }
+
+        function addDigit(digit) {
+            if (waitingForOperand) {
+                fieldInputs = ['', '', '', ''];
+                currentField = 0;
+                waitingForOperand = false;
+            }
+
+            // Добавляем цифру в текущее поле
+            if (fieldInputs[currentField].length < 2) {
+                const newValue = fieldInputs[currentField] + digit;
+                
+                // Проверяем ограничения
+                if (isValidInput(currentField, newValue)) {
+                    fieldInputs[currentField] = newValue;
+                    
+                    // Если поле заполнено (2 цифры), переходим к следующему
+                    if (fieldInputs[currentField].length === 2 && currentField < 3) {
+                        currentField++;
+                    }
+                }
+            }
+            
+            updateDisplay();
+        }
+
+        function toggleLimits() {
+            limitsEnabled = !limitsEnabled;
+            const lockBtn = document.getElementById('lockBtn');
+            const limitStatus = document.getElementById('limitStatus');
+            
+            if (limitsEnabled) {
+                lockBtn.textContent = '🔒';
+                lockBtn.className = 'lock';
+                lockBtn.title = 'Ограничения включены (24ч:60м:60с:24к)';
+                limitStatus.textContent = 'Ограничения: 24ч:60м:60с:24к (🔒 - вкл/выкл)';
+            } else {
+                lockBtn.textContent = '🔓';
+                lockBtn.className = 'lock unlocked';
+                lockBtn.title = 'Ограничения отключены';
+                limitStatus.textContent = 'Ограничения отключены (🔒 - вкл/выкл)';
+            }
+        }
+
+        function addOperator(op) {
+            if (fieldInputs.every(field => field === '') && expression === '') return;
+            
+            if (fieldInputs.some(field => field !== '')) {
+                const timeStr = formatTimeInput();
+                if (expression !== '' && !waitingForOperand) {
+                    // Выполняем промежуточный расчет
+                    calculate();
+                    expression += ` ${op} `;
+                } else {
+                    expression = timeStr + ` ${op} `;
+                }
+            } else if (expression !== '' && !expression.endsWith(' ')) {
+                expression += ` ${op} `;
+            }
+            
+            waitingForOperand = true;
+            updateDisplay();
+        }
+
+        function calculate() {
+            if (fieldInputs.every(field => field === '') || expression === '') return;
+            
+            const timeStr = formatTimeInput();
+            const fullExpression = expression + timeStr;
+            
+            try {
+                const result = evaluateTimeExpression(fullExpression);
+                
+                expression = '';
+                setTimeFromResult(result);
+                waitingForOperand = true;
+                
+                updateDisplay();
+            } catch (error) {
+                alert('Ошибка в вычислениях');
+            }
+        }
+
+        function setTimeFromResult(time) {
+            fieldInputs[0] = time.hours.toString().padStart(2, '0');
+            fieldInputs[1] = time.minutes.toString().padStart(2, '0');
+            fieldInputs[2] = time.seconds.toString().padStart(2, '0');
+            fieldInputs[3] = time.frames.toString().padStart(2, '0');
+            currentField = 0;
+        }
+
+        function evaluateTimeExpression(expr) {
+            // Разбираем выражение на части
+            const parts = expr.split(/\s+/);
+            let result = parseTime(parts[0]);
+            
+            for (let i = 1; i < parts.length; i += 2) {
+                const operator = parts[i];
+                const operand = parseTime(parts[i + 1]);
+                
+                if (operator === '+') {
+                    result = addTime(result, operand);
+                } else if (operator === '-') {
+                    result = subtractTime(result, operand);
+                }
+            }
+            
+            return result;
+        }
+
+        function parseTime(timeStr) {
+            const parts = timeStr.split(':');
+            return {
+                hours: parseInt(parts[0]) || 0,
+                minutes: parseInt(parts[1]) || 0,
+                seconds: parseInt(parts[2]) || 0,
+                frames: parseInt(parts[3]) || 0
+            };
+        }
+
+        function addTime(time1, time2) {
+            let frames = time1.frames + time2.frames;
+            let seconds = time1.seconds + time2.seconds;
+            let minutes = time1.minutes + time2.minutes;
+            let hours = time1.hours + time2.hours;
+            
+            // Нормализация (предполагаем 25 кадров в секунде)
+            if (frames >= 25) {
+                seconds += Math.floor(frames / 25);
+                frames = frames % 25;
+            }
+            
+            if (seconds >= 60) {
+                minutes += Math.floor(seconds / 60);
+                seconds = seconds % 60;
+            }
+            
+            if (minutes >= 60) {
+                hours += Math.floor(minutes / 60);
+                minutes = minutes % 60;
+            }
+            
+            return { hours, minutes, seconds, frames };
+        }
+
+        function subtractTime(time1, time2) {
+            let totalFrames1 = time1.frames + time1.seconds * 25 + time1.minutes * 60 * 25 + time1.hours * 60 * 60 * 25;
+            let totalFrames2 = time2.frames + time2.seconds * 25 + time2.minutes * 60 * 25 + time2.hours * 60 * 60 * 25;
+            
+            let resultFrames = Math.max(0, totalFrames1 - totalFrames2);
+            
+            const hours = Math.floor(resultFrames / (60 * 60 * 25));
+            resultFrames %= (60 * 60 * 25);
+            
+            const minutes = Math.floor(resultFrames / (60 * 25));
+            resultFrames %= (60 * 25);
+            
+            const seconds = Math.floor(resultFrames / 25);
+            const frames = resultFrames % 25;
+            
+            return { hours, minutes, seconds, frames };
+        }
+
+        function timeToString(time) {
+            const h = time.hours.toString().padStart(2, '0');
+            const m = time.minutes.toString().padStart(2, '0');
+            const s = time.seconds.toString().padStart(2, '0');
+            const f = time.frames.toString().padStart(2, '0');
+            
+            return h + m + s + f;
+        }
+
+        function backspace() {
+            if (fieldInputs[currentField].length > 0) {
+                fieldInputs[currentField] = fieldInputs[currentField].slice(0, -1);
+            } else if (currentField > 0) {
+                // Переходим к предыдущему полю, если текущее пустое
+                currentField--;
+                if (fieldInputs[currentField].length > 0) {
+                    fieldInputs[currentField] = fieldInputs[currentField].slice(0, -1);
+                }
+            }
+            
+            updateDisplay();
+        }
+
+        function clearAll() {
+            fieldInputs = ['', '', '', ''];
+            currentField = 0;
+            expression = '';
+            waitingForOperand = false;
+            updateDisplay();
+        }
+
+        // Инициализация
+        updateDisplay();
+        
+        // Устанавливаем начальное состояние кнопки замка
+        const lockBtn = document.getElementById('lockBtn');
+        lockBtn.title = 'Ограничения включены (24ч:60м:60с:24к)';
+
+        // Поддержка клавиатуры
+        document.addEventListener('keydown', function(event) {
+            if (event.key >= '0' && event.key <= '9') {
+                addDigit(event.key);
+            } else if (event.key === '+') {
+                addOperator('+');
+            } else if (event.key === '-') {
+                addOperator('-');
+            } else if (event.key === 'Enter' || event.key === '=') {
+                calculate();
+            } else if (event.key === 'Backspace') {
+                event.preventDefault();
+                backspace();
+            } else if (event.key === 'Escape' || event.key.toLowerCase() === 'c') {
+                clearAll();
+            }
+        });
+    </script>
+</body>
+</html>
